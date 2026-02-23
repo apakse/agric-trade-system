@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trade Dashboard</title>
+</head>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<body>
+
+<h2>Agricultural Trade Data Dashboard (Sourced from ICUMS) </h2>
+
+<form method="get">
+    Year:
+    <select name="year">
+        <option value="">All</option>
+        {% for y in years %}
+            <option value="{{ y }}">{{ y }}</option>
+        {% endfor %}
+    </select>
+
+    Month:
+    <select name="month">
+        <option value="">All</option>
+        {% for m in months %}
+            <option value="{{ m }}">{{ m }}</option>
+        {% endfor %}
+    </select>
+
+    Trade Type:
+    <select name="trade_type">
+        <option value="">All</option>
+        {% for t in trade_types %}
+            <option value="{{ t }}">{{ t }}</option>
+        {% endfor %}
+    </select>
+
+    
+    Country:
+    <select name="country">
+        <option value="">All</option>
+        {% for c in countries %}
+            <option value="{{ c }}">{{ c }}</option>
+        {% endfor %}
+    </select>
+
+    Search:
+    <input type="text" name="search" placeholder="HS code, description">
+
+   
+    <button type="submit">Filter</button>
+
+    <a href="{% url 'export_filtered_data' %}?{{ request.GET.urlencode }}" 
+    class="btn btn-success">
+    📥 Download CSV
+    </a>
+    
+</form>
+
+<hr>
+
+<h3>Summary</h3>
+
+<p><strong>Total Records:</strong> {{ total_records }}</p>
+<p><strong>Total Quantity:</strong> {{ total_quantity|floatformat:2 }}</p>
+<p><strong>Total Value (USD):</strong> {{ total_value|floatformat:2 }}</p>
+
+<hr>
+
+<hr>
+
+<h3>Top 10 Countries by Trade Value</h3>
+
+<table border="1" cellpadding="5">
+    <tr>
+        <th>Country</th>
+        <th>Total Value (USD)</th>
+    </tr>
+
+    {% for item in top_countries %}
+    <tr>
+        <td>{{ item.country }}</td>
+        <td>{{ item.total_value|floatformat:2 }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="2">No data available</td>
+    </tr>
+    {% endfor %}
+</table>
+
+
+<table border="1" cellpadding="5">
+    <tr>
+        <th>Year</th>
+        <th>Month</th>
+        <th>Type</th>
+        <th>HS Code</th>
+        <th>Description</th>
+        <th>Country</th>
+        <th>Quantity</th>
+        <th>Value (USD)</th>
+    </tr>
+
+    {% for trade in trades %}
+    <tr>
+        <td>{{ trade.year }}</td>
+        <td>{{ trade.month }}</td>
+        <td>{{ trade.trade_type }}</td>
+        <td>{{ trade.hs_code.code }}</td>
+        <td>{{ trade.hs_code.description }}</td>
+        <td>{{ trade.country }}</td>
+        <td>{{ trade.quantity }}</td>
+        <td>{{ trade.value_usd }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<div>
+    {% if is_paginated %}
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+        {% endif %}
+
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Next</a>
+        {% endif %}
+    {% endif %}
+</div>
+
+</body>
+</html>
