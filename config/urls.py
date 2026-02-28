@@ -20,10 +20,17 @@ from django.urls import path
 from trade.views import TradeUploadView
 from trade.views import TradeDataListView
 from trade.views import export_filtered_data
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("upload/", TradeUploadView.as_view(), name="trade_upload"),
     path("dashboard/", TradeDataListView.as_view(), name="trade_dashboard"),
     path("export/", export_filtered_data, name="export_filtered_data"),
+    path(
+        "login/",
+        auth_views.LoginView.as_view(template_name="trade/login.html"),
+        name="login",
+    ),
+    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
 ]

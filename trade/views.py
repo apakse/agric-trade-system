@@ -19,10 +19,13 @@ from django.db.models import DateField
 import calendar
 import csv
 from django.http import HttpResponse
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 
 
-class TradeUploadView(View):
+class TradeUploadView(LoginRequiredMixin, View):
     template_name = "trade/upload.html"
+    login_url = "login"
 
     def get(self, request):
         form = TradeUploadForm()
@@ -154,9 +157,10 @@ class TradeUploadView(View):
 # user view page
 
 
-class TradeDataListView(ListView):
+class TradeDataListView(LoginRequiredMixin, ListView):
     model = TradeData
     template_name = "trade/dashboard.html"
+    login_url = "login"
     context_object_name = "trades"
     paginate_by = 50
 
@@ -290,6 +294,7 @@ class TradeDataListView(ListView):
 
 
 # export data
+@login_required(login_url="login")
 def export_filtered_data(request):
     queryset = TradeData.objects.all()
 

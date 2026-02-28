@@ -54,7 +54,13 @@
     class="btn btn-success">
     📥 Download CSV
     </a>
-    
+
+
+</form>
+
+<form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">Logout</button>
 </form>
 
 <hr>
@@ -62,8 +68,8 @@
 <h3>Summary</h3>
 
 <p><strong>Total Records:</strong> {{ total_records }}</p>
-<p><strong>Total Quantity:</strong> {{ total_quantity|floatformat:2 }}</p>
-<p><strong>Total Value (USD):</strong> {{ total_value|floatformat:2 }}</p>
+<p><strong>Total Quantity (Kg):</strong> {{ total_quantity|floatformat:2 }}</p>
+<p><strong>Total Value (GHS):</strong> {{ total_value|floatformat:2 }}</p>
 
 <hr>
 
@@ -74,7 +80,7 @@
 <table border="1" cellpadding="5">
     <tr>
         <th>Country</th>
-        <th>Total Value (USD)</th>
+        <th>Total Value (GHS)</th>
     </tr>
 
     {% for item in top_countries %}
@@ -98,8 +104,8 @@
         <th>HS Code</th>
         <th>Description</th>
         <th>Country</th>
-        <th>Quantity</th>
-        <th>Value (USD)</th>
+        <th>Quantity (Kg)</th>
+        <th>Value (GHS)</th>
     </tr>
 
     {% for trade in trades %}
