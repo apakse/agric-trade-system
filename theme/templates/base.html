@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Trade Dashboard{% endblock %}</title>
+
+    <!-- Tailwind + DaisyUI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.2/dist/full.css" rel="stylesheet" />
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Tom Select CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+
+<!-- Tom Select JS -->
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+</head>
+
+<body class="bg-base-200 min-h-screen">
+
+    <!-- Navbar -->
+    <div class="navbar bg-base-100 shadow-md px-6">
+        <div class="flex-1">
+            <a class="text-xl font-bold">🌾 Trade Dashboard</a>
+        </div>
+
+        <div class="flex-none">
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-error">Logout</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="p-6">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+        
+            new TomSelect("#month-select", {
+                plugins: ['remove_button'],
+                persist: false,
+                create: false
+            });
+        
+            new TomSelect("#year-select", {
+                plugins: ['remove_button'],
+                persist: false,
+                create: false
+            });
+        
+            new TomSelect("#country-select", {
+                plugins: ['remove_button'],
+                persist: false,
+                create: false
+            });
+        
+            new TomSelect("#trade-type-select", {
+                plugins: ['remove_button'],
+                persist: false,
+                create: false
+            });
+        
+        });
+        </script>
+</body>
+</html>

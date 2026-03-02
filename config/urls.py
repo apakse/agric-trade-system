@@ -16,11 +16,12 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from trade.views import TradeUploadView
 from trade.views import TradeDataListView
 from trade.views import export_filtered_data
 from django.contrib.auth import views as auth_views
+from django.conf import settings
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -34,3 +35,8 @@ urlpatterns = [
     ),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += [
+        path("__reload__/", include("django_browser_reload.urls")),
+    ]

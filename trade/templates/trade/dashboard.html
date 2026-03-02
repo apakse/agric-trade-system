@@ -1,140 +1,176 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Trade Dashboard</title>
-</head>
+{% extends "base.html" %}
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% block title %}Dashboard{% endblock %}
 
-<body>
+{% block content %}
 
-<h2>Agricultural Trade Data Dashboard (Sourced from ICUMS) </h2>
+<h2 class="text-2xl font-bold mb-6">
+    Agricultural Trade Data Dashboard (Source: ICUMS)
+</h2>
 
-<form method="get">
-    Year:
-    <select name="year">
-        <option value="">All</option>
+<!-- Filters Card -->
+<div class="card bg-base-100 shadow-md p-6 mb-6">
+
+<form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+
+    <select name="year" class="select select-bordered">
+        <option value="">All Years</option>
         {% for y in years %}
-            <option value="{{ y }}">{{ y }}</option>
+        <option value="{{ y }}"
+        {% if request.GET.year == y|stringformat:"s" %}
+            selected
+        {% endif %}
+    >
+        {{ y }}
+    </option>
         {% endfor %}
     </select>
 
-    Month:
-    <select name="month">
-        <option value="">All</option>
+    <select name="month" class="select select-bordered">
+        <option value="">Month</option>
         {% for m in months %}
-            <option value="{{ m }}">{{ m }}</option>
+        <option value="{{ m }}"
+        {% if request.GET.month == m %}
+            selected
+        {% endif %}
+    >
+        {{ m }}
+    </option>
         {% endfor %}
     </select>
 
-    Trade Type:
-    <select name="trade_type">
-        <option value="">All</option>
+    <select name="trade_type" class="select select-bordered">
+        <option value="">All Trade Types</option>
         {% for t in trade_types %}
-            <option value="{{ t }}">{{ t }}</option>
+        <option value="{{ t }}"
+        {% if request.GET.trade_type == t %}
+            selected
+        {% endif %}
+    >
+        {{ t }}
+    </option>
         {% endfor %}
     </select>
 
-    
-    Country:
-    <select name="country">
-        <option value="">All</option>
+    <select name="country" class="select select-bordered">
+        <option value="">All Countries</option>
         {% for c in countries %}
-            <option value="{{ c }}">{{ c }}</option>
+        <option value="{{ c }}"
+        {% if request.GET.country == c %}
+            selected
+        {% endif %}
+    >
+        {{ c }}
+    </option>
         {% endfor %}
     </select>
 
-    Search:
-    <input type="text" name="search" placeholder="HS code, description">
+    <input type="text"
+       name="search"
+       value="{{ request.GET.search }}"
+       placeholder="HS code or description"
+       class="input input-bordered" />
 
-   
-    <button type="submit">Filter</button>
 
-    <a href="{% url 'export_filtered_data' %}?{{ request.GET.urlencode }}" 
-    class="btn btn-success">
-    📥 Download CSV
-    </a>
+    <div class="col-span-1 md:col-span-5 flex gap-3 mt-2">
+        <button type="submit" class="btn btn-primary">Filter</button>
 
+        <a href="{% url 'export_filtered_data' %}?{{ request.GET.urlencode }}"
+           class="btn btn-success">
+           📥 Download CSV
+        </a>
+    </div>
 
 </form>
-
-<form method="post" action="{% url 'logout' %}">
-    {% csrf_token %}
-    <button type="submit">Logout</button>
-</form>
-
-<hr>
-
-<h3>Summary</h3>
-
-<p><strong>Total Records:</strong> {{ total_records }}</p>
-<p><strong>Total Quantity (Kg):</strong> {{ total_quantity|floatformat:2 }}</p>
-<p><strong>Total Value (GHS):</strong> {{ total_value|floatformat:2 }}</p>
-
-<hr>
-
-<hr>
-
-<h3>Top 10 Countries by Trade Value</h3>
-
-<table border="1" cellpadding="5">
-    <tr>
-        <th>Country</th>
-        <th>Total Value (GHS)</th>
-    </tr>
-
-    {% for item in top_countries %}
-    <tr>
-        <td>{{ item.country }}</td>
-        <td>{{ item.total_value|floatformat:2 }}</td>
-    </tr>
-    {% empty %}
-    <tr>
-        <td colspan="2">No data available</td>
-    </tr>
-    {% endfor %}
-</table>
-
-
-<table border="1" cellpadding="5">
-    <tr>
-        <th>Year</th>
-        <th>Month</th>
-        <th>Type</th>
-        <th>HS Code</th>
-        <th>Description</th>
-        <th>Country</th>
-        <th>Quantity (Kg)</th>
-        <th>Value (GHS)</th>
-    </tr>
-
-    {% for trade in trades %}
-    <tr>
-        <td>{{ trade.year }}</td>
-        <td>{{ trade.month }}</td>
-        <td>{{ trade.trade_type }}</td>
-        <td>{{ trade.hs_code.code }}</td>
-        <td>{{ trade.hs_code.description }}</td>
-        <td>{{ trade.country }}</td>
-        <td>{{ trade.quantity }}</td>
-        <td>{{ trade.value_usd }}</td>
-    </tr>
-    {% endfor %}
-</table>
-
-<div>
-    {% if is_paginated %}
-        {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
-        {% endif %}
-
-        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-
-        {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}">Next</a>
-        {% endif %}
-    {% endif %}
 </div>
 
-</body>
-</html>
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+
+    <div class="card bg-base-100 shadow p-4">
+        <h3 class="text-sm text-gray-500">Total Records</h3>
+        <p class="text-2xl font-bold">{{ total_records }}</p>
+    </div>
+
+    <div class="card bg-base-100 shadow p-4">
+        <h3 class="text-sm text-gray-500">Total Quantity (Kg)</h3>
+        <p class="text-2xl font-bold">
+            {{ total_quantity|floatformat:2 }}
+        </p>
+    </div>
+
+    <div class="card bg-base-100 shadow p-4">
+        <h3 class="text-sm text-gray-500">Total Value (GHS)</h3>
+        <p class="text-2xl font-bold">
+            {{ total_value|floatformat:2 }}
+        </p>
+    </div>
+
+</div>
+
+<!-- Top Countries -->
+<div class="card bg-base-100 shadow-md p-6 mb-6">
+    <h3 class="font-bold text-lg mb-4">Top 10 Countries by Trade Value</h3>
+
+    <div class="overflow-x-auto">
+        <table class="table table-zebra">
+            <thead>
+                <tr>
+                    <th>Country</th>
+                    <th>Total Value (GHS)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in top_countries %}
+                <tr>
+                    <td>{{ item.country }}</td>
+                    <td>{{ item.total_value|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2">No data available</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Data Table -->
+<div class="card bg-base-100 shadow-md p-6">
+    <h3 class="font-bold text-lg mb-4">Trade Records</h3>
+
+    <div class="overflow-x-auto">
+        <table class="table table-zebra table-sm">
+            <thead>
+                <tr>
+                    <th>Year</th>
+                    <th>Month</th>
+                    <th>Type</th>
+                    <th>HS Code</th>
+                    <th>Description</th>
+                    <th>Country</th>
+                    <th>Quantity (Kg)</th>
+                    <th>Value (GHS)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trade in trades %}
+                <tr>
+                    <td>{{ trade.year }}</td>
+                    <td>{{ trade.month }}</td>
+                    <td>{{ trade.trade_type }}</td>
+                    <td>{{ trade.hs_code.code }}</td>
+                    <td>{{ trade.hs_code.description }}</td>
+                    <td>{{ trade.country }}</td>
+                    <td>{{ trade.quantity }}</td>
+                    <td>{{ trade.value_usd }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+{% endblock %}
