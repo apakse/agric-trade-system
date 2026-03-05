@@ -1,10 +1,74 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Login</title>
+    <title>Agricultural Trade System Login</title>
+
+    <style>
+        body{
+            margin:0;
+            font-family: Arial, Helvetica, sans-serif;
+
+            /* agriculture background */
+            background-image:url("https://images.unsplash.com/photo-1500382017468-9049fed747ef");
+            background-size:cover;
+            background-position:center;
+            height:100vh;
+
+            display:flex;
+            justify-content:center;
+            align-items:center;
+        }
+
+        .login-container{
+            background:white;
+            padding:40px;
+            width:350px;
+            border-radius:10px;
+            box-shadow:0 10px 25px rgba(0,0,0,0.2);
+            text-align:center;
+        }
+
+        h2{
+            color:#0b3d2e;   /* navy green */
+            margin-bottom:20px;
+        }
+
+        input{
+            width:100%;
+            padding:10px;
+            margin-top:8px;
+            margin-bottom:15px;
+            border:1px solid #ccc;
+            border-radius:5px;
+        }
+
+        button{
+            width:100%;
+            padding:10px;
+            background:#0b3d2e;
+            color:white;
+            border:none;
+            border-radius:5px;
+            font-size:16px;
+            cursor:pointer;
+        }
+
+        button:hover{
+            background:#145c44;
+        }
+
+        .error{
+            color:red;
+            margin-top:10px;
+        }
+    </style>
 </head>
+
 <body>
-    <h2>Agricultural Trade System Login</h2>
+
+<div class="login-container">
+
+    <h2>Agricultural Trade Data</h2>
 
     <form method="post">
         {% csrf_token %}
@@ -13,7 +77,10 @@
     </form>
 
     {% if form.errors %}
-        <p style="color:red;">Invalid username or password</p>
+        <p class="error">Invalid username or password</p>
     {% endif %}
+
+</div>
+
 </body>
 </html>
