@@ -41,7 +41,6 @@ class TradeUploadView(LoginRequiredMixin, View):
         filename = file.name.lower()
 
         try:
-            # ✅ Detect file type properly
             if filename.endswith(".csv"):
                 df = self.read_csv_safely(file)
             elif filename.endswith(".xlsx"):
@@ -65,10 +64,11 @@ class TradeUploadView(LoginRequiredMixin, View):
                 messages.error(request, "Missing required columns in file.")
                 return redirect("trade_upload")
 
-            records_inserted = self.process_dataframe(df)
+            records_inserted, records_skipped = self.process_dataframe(df)
 
             messages.success(
-                request, f"{records_inserted} records uploaded successfully."
+                request,
+                f"{records_inserted} records uploaded successfully. {records_skipped} duplicate records skipped.",
             )
             return redirect("trade_upload")
 
@@ -76,30 +76,23 @@ class TradeUploadView(LoginRequiredMixin, View):
             messages.error(request, f"Upload failed: {str(e)}")
             return redirect("trade_upload")
 
-    #  Professional encoding-safe CSV reader
     def read_csv_safely(self, file):
-
         file.seek(0)
         raw_data = file.read()
 
-        # Try UTF-8 first
         try:
             return pd.read_csv(io.BytesIO(raw_data), encoding="utf-8")
         except UnicodeDecodeError:
             pass
 
-        # Try Windows encoding
         try:
             return pd.read_csv(io.BytesIO(raw_data), encoding="latin1")
         except UnicodeDecodeError:
             pass
 
-        # Final fallback
         return pd.read_csv(io.BytesIO(raw_data), encoding="cp1252")
 
-    # 🔥 High-performance insert logic
     def process_dataframe(self, df):
-
         df = df.fillna("")
         df["hs_code"] = df["hs_code"].astype(str).str.strip()
         df["trade_type"] = df["trade_type"].str.upper().str.strip()
@@ -107,7 +100,10 @@ class TradeUploadView(LoginRequiredMixin, View):
         # Validate month range
         df = df[(df["month"] >= 1) & (df["month"] <= 12)]
 
-        unique_hs_codes = df[["hs_code", "description"]].drop_duplicates()
+        # Deduplicate HS codes within the file by hs_code only
+        unique_hs_codes = df[["hs_code", "description"]].drop_duplicates(
+            subset=["hs_code"]
+        )
 
         # Preload existing HS codes
         existing_hs = {
@@ -116,7 +112,6 @@ class TradeUploadView(LoginRequiredMixin, View):
         }
 
         new_hs_objects = []
-
         for row in unique_hs_codes.itertuples(index=False):
             if row.hs_code not in existing_hs:
                 new_hs_objects.append(
@@ -127,14 +122,49 @@ class TradeUploadView(LoginRequiredMixin, View):
                 )
 
         if new_hs_objects:
-            HSCode.objects.bulk_create(new_hs_objects, batch_size=1000)
+            # ignore_conflicts prevents crash if concurrent upload sneaks in the same code
+            HSCode.objects.bulk_create(
+                new_hs_objects, batch_size=1000, ignore_conflicts=True
+            )
 
         # Reload all HS codes after insertion
         all_hs = {hs.code: hs for hs in HSCode.objects.filter(code__in=df["hs_code"])}
 
+        # Build a set of existing (year, month, hs_code_id, country, trade_type) to detect duplicates
+        incoming_keys = set(
+            zip(
+                df["year"].astype(int),
+                df["month"].astype(int),
+                df["hs_code"],
+                df["country"].astype(str).str.strip(),
+                df["trade_type"],
+            )
+        )
+
+        existing_records = TradeData.objects.filter(
+            year__in=df["year"].unique(),
+            month__in=df["month"].unique(),
+            hs_code__in=[hs for hs in all_hs.values()],
+        ).values_list("year", "month", "hs_code__code", "country", "trade_type")
+
+        existing_keys = set(existing_records)
+
         trade_objects = []
+        records_skipped = 0
 
         for row in df.itertuples(index=False):
+            key = (
+                int(row.year),
+                int(row.month),
+                row.hs_code,
+                str(row.country).strip(),
+                row.trade_type,
+            )
+
+            if key in existing_keys:
+                records_skipped += 1
+                continue
+
             trade_objects.append(
                 TradeData(
                     year=int(row.year),
@@ -149,12 +179,11 @@ class TradeUploadView(LoginRequiredMixin, View):
             )
 
         with transaction.atomic():
-            TradeData.objects.bulk_create(trade_objects, batch_size=2000)
+            TradeData.objects.bulk_create(
+                trade_objects, batch_size=2000, ignore_conflicts=True
+            )
 
-        return len(trade_objects)
-
-
-# user view page
+        return len(trade_objects), records_skipped
 
 
 class TradeDataListView(LoginRequiredMixin, ListView):
@@ -189,7 +218,6 @@ class TradeDataListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(
                 Q(hs_code__code__icontains=search)
                 | Q(hs_code__description__icontains=search)
-                # | Q(country__icontains=search)
             )
 
         return queryset
@@ -197,7 +225,6 @@ class TradeDataListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # IMPORTANT: Use filtered queryset for totals
         filtered_queryset = self.get_queryset()
 
         totals = filtered_queryset.aggregate(
@@ -210,7 +237,6 @@ class TradeDataListView(LoginRequiredMixin, ListView):
         context["total_value"] = totals["total_value"] or 0
         context["total_records"] = totals["total_records"] or 0
 
-        # top 10 countries by value based on filtering
         top_countries = (
             filtered_queryset.exclude(country__isnull=True)
             .exclude(country="")
@@ -220,7 +246,6 @@ class TradeDataListView(LoginRequiredMixin, ListView):
         )
         context["top_countries"] = top_countries
 
-        # top 10 crops
         top_hs_codes = (
             filtered_queryset.values("hs_code__code", "hs_code__description")
             .annotate(total_value=Sum("value_usd"))
@@ -228,7 +253,6 @@ class TradeDataListView(LoginRequiredMixin, ListView):
         )
         context["top_hs_codes"] = top_hs_codes
 
-        # trade split
         trade_split = list(
             filtered_queryset.values("trade_type").annotate(
                 total_value=Sum("value_usd")
@@ -242,7 +266,6 @@ class TradeDataListView(LoginRequiredMixin, ListView):
                 item["percentage"] = 0
         context["trade_split"] = trade_split
 
-        # cncentration risk
         top_total = sum(item["total_value"] for item in top_hs_codes)
         overall_total = (
             filtered_queryset.aggregate(total=Sum("value_usd"))["total"] or 0
@@ -252,38 +275,33 @@ class TradeDataListView(LoginRequiredMixin, ListView):
         )
         context["concentration_ratio"] = round(concentration_ratio, 2)
 
-        # trade balance
         exports = (
-            filtered_queryset.filter(trade_type="Export").aggregate(
+            filtered_queryset.filter(trade_type="EXPORT").aggregate(
                 total=Sum("value_usd")
             )["total"]
             or 0
         )
         imports = (
-            filtered_queryset.filter(trade_type="Import").aggregate(
+            filtered_queryset.filter(trade_type="IMPORT").aggregate(
                 total=Sum("value_usd")
             )["total"]
             or 0
         )
         context["trade_balance"] = exports - imports
 
-        # Distinct filter dropdown values
         context["years"] = (
             TradeData.objects.values_list("year", flat=True).distinct().order_by("year")
         )
-
         context["months"] = (
             TradeData.objects.values_list("month", flat=True)
             .distinct()
             .order_by("month")
         )
-
         context["trade_types"] = (
             TradeData.objects.values_list("trade_type", flat=True)
             .distinct()
             .order_by("trade_type")
         )
-
         context["countries"] = (
             TradeData.objects.values_list("country", flat=True)
             .distinct()
@@ -293,12 +311,10 @@ class TradeDataListView(LoginRequiredMixin, ListView):
         return context
 
 
-# export data
 @login_required(login_url="login")
 def export_filtered_data(request):
     queryset = TradeData.objects.all()
 
-    # Apply same filters
     year = request.GET.get("year")
     month = request.GET.get("month")
     crop = request.GET.get("crop")
@@ -306,23 +322,17 @@ def export_filtered_data(request):
 
     if year:
         queryset = queryset.filter(year=year)
-
     if month:
         queryset = queryset.filter(month=month)
-
     if crop:
         queryset = queryset.filter(hs_code__description=crop)
-
     if country:
         queryset = queryset.filter(country=country)
 
-    # Create response
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="filtered_trade_data.csv"'
 
     writer = csv.writer(response)
-
-    # Header
     writer.writerow(
         [
             "Year",
@@ -336,7 +346,6 @@ def export_filtered_data(request):
         ]
     )
 
-    # Data rows
     for obj in queryset:
         writer.writerow(
             [

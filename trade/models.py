@@ -64,3 +64,16 @@ class TradeData(models.Model):
 
     def __str__(self):
         return f"{self.hs_code.code} - {self.trade_type} ({self.year}-{self.month})"
+
+
+# unique model
+class Meta:
+    unique_together = [["year", "month", "hs_code", "trade_type", "country"]]
+    indexes = [
+        models.Index(fields=["year", "month"]),
+        models.Index(fields=["trade_type"]),
+        models.Index(fields=["hs_code", "year"]),
+        models.Index(fields=["hs_code", "trade_type"]),
+        models.Index(fields=["country"]),
+    ]
+    ordering = ["-year", "-month"]
